@@ -190,7 +190,7 @@ window.setByName = (name, value) => {
       break;
     case 'connect':
       newConn();
-      startConn(value);
+      startConn(value).catch(e => console.error('startConn error:', e));
       break;
     case 'session_add_sync':
       return '';
@@ -318,6 +318,8 @@ function _getByName(name, arg) {
       return curConn.getOption(arg) || false;
     case 'option':
       if (arg === 'key') return getConfigKey();
+      if (arg === 'custom-rendezvous-server') return getConfigHost();
+      if (arg === 'relay-server') return getConfigRelay();
       return localStorage.getItem(arg);
     case 'option:local':
       return localStorage.getItem(arg) || '';

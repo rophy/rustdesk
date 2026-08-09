@@ -23,7 +23,7 @@ export async function loadConfig(): Promise<void> {
       console.log("Loaded config: host=" + HOST + ", relay=" + (RELAY_HOST || HOST));
     }
   } catch (e) {
-    console.log("No config.json found, using defaults (host=" + HOST + ")");
+    console.log("Failed to load config.json (" + e + "), using defaults (host=" + HOST + ")");
   }
 }
 
