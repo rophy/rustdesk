@@ -85,6 +85,7 @@ jobs:
     uses: ./.github/workflows/bridge.yml
 
   build-RustDeskTempTopMostWindow:
+    if: ${{ matrix.job.target != 'windows-11-arm' || github.repository == 'rustdesk/rustdesk' }}
     uses: ./.github/workflows/third-party-RustDeskTempTopMostWindow.yml
     strategy:
       fail-fast: false
@@ -106,6 +107,7 @@ jobs:
       target_version: Windows10
 
   build-for-windows-flutter:
+    if: ${{ matrix.job.os != 'windows-11-arm' || github.repository == 'rustdesk/rustdesk' }}
     name: ${{ matrix.job.target }}
     needs: [build-RustDeskTempTopMostWindow, generate-bridge]
     runs-on: ${{ matrix.job.os }}
@@ -1423,6 +1425,7 @@ jobs:
             signed-apk/rustdesk-${{ env.VERSION }}-universal${{ env.suffix }}.apk
 
   build-rustdesk-linux:
+    if: ${{ matrix.job.on != 'ubuntu-22.04-arm' || github.repository == 'rustdesk/rustdesk' }}
     needs: [generate-bridge]
     name: build rustdesk linux ${{ matrix.job.target }}
     runs-on: ${{ matrix.job.on }}
