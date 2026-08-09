@@ -24,7 +24,13 @@ RUN npm install -g yarn typescript protoc
 COPY .github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff /tmp/flutter.diff
 RUN cd /opt/flutter && git apply /tmp/flutter.diff && rm /tmp/flutter.diff
 
+ARG UID=1000
+ARG GID=1000
+RUN groupadd -g ${GID} builder && useradd -m -u ${UID} -g ${GID} builder \
+    && chown -R builder:builder /opt/flutter
+
 RUN git config --global --add safe.directory /opt/flutter \
     && git config --global --add safe.directory /app
 
+USER builder
 WORKDIR /app/flutter

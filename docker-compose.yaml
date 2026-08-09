@@ -19,6 +19,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.web
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
     volumes:
       - .:/app
     stdin_open: true
