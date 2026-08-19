@@ -4,11 +4,13 @@
   "scripts": {
     "dev": "vite",
     "build": "python3 ./gen_js_from_hbb.py > src/gen_js_from_hbb.ts && python3 ./ts_proto.py && tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "devDependencies": {
     "typescript": "^4.4.4",
-    "vite": "2.8"
+    "vite": "2.8",
+    "vitest": "^4.1.11"
   },
   "dependencies": {
     "@types/node": "^18.19.130",
