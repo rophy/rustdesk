@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { setConfig, getDefaultUri, getHost, getRelayHost, getConfigKey } from "./url";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { setConfig, getDefaultUri, getHost, getRelayHost, getConfigKey, loadConfig } from "./url";
 
 describe("getDefaultUri", () => {
   beforeEach(() => {
@@ -44,5 +44,51 @@ describe("setConfig / getters", () => {
     expect(getHost()).toBe("myhost");
     expect(getRelayHost()).toBe("myrelay");
     expect(getConfigKey()).toBe("mykey123");
+  });
+});
+
+describe("loadConfig", () => {
+  beforeEach(() => {
+    setConfig("", "", "");
+  });
+
+  it("loads config from fetch response", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        host: "wss://test.example.com/hbbs",
+        relay: "wss://test.example.com/hbbr",
+        key: "testkey123",
+      }),
+    });
+    await loadConfig();
+    expect(getHost()).toBe("wss://test.example.com/hbbs");
+    expect(getRelayHost()).toBe("wss://test.example.com/hbbr");
+    expect(getConfigKey()).toBe("testkey123");
+  });
+
+  it("keeps defaults when fetch fails", async () => {
+    setConfig("default-host", "", "");
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error("network error"));
+    await loadConfig();
+    expect(getHost()).toBe("default-host");
+  });
+
+  it("keeps defaults when response is not ok", async () => {
+    setConfig("default-host", "", "");
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false });
+    await loadConfig();
+    expect(getHost()).toBe("default-host");
+  });
+
+  it("handles partial config (only host)", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ host: "partial-host" }),
+    });
+    await loadConfig();
+    expect(getHost()).toBe("partial-host");
+    expect(getRelayHost()).toBe("");
+    expect(getConfigKey()).toBe("");
   });
 });
