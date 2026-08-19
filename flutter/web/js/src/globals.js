@@ -20,7 +20,11 @@ export function msgbox(type, title, text) {
   if (!type || (type == 'error' && !text)) return;
   const text2 = text.toLowerCase();
   var hasRetry = checkIfRetry(type, title, text) ? 'true' : '';
-  window.onGlobalEvent(JSON.stringify({ name: 'msgbox', type, title, text, link: '', hasRetry }));
+  if (window.onGlobalEvent) {
+    window.onGlobalEvent(JSON.stringify({ name: 'msgbox', type, title, text, link: '', hasRetry }));
+  } else {
+    console.warn('msgbox (no handler):', type, title, text);
+  }
 }
 
 function jsonfyForDart(payload) {
@@ -41,7 +45,11 @@ function jsonfyForDart(payload) {
 export function pushEvent(name, payload) {
   payload = jsonfyForDart(payload);
   payload.name = name;
-  window.onGlobalEvent(JSON.stringify(payload));
+  if (window.onGlobalEvent) {
+    window.onGlobalEvent(JSON.stringify(payload));
+  } else {
+    console.warn('pushEvent (no handler):', name, payload);
+  }
 }
 
 let yuvWorker;

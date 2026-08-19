@@ -6,11 +6,9 @@ import * as sha256 from "fast-sha256";
 import * as globals from "./globals";
 import { decompress, mapKey, sleep } from "./common";
 
-const PORT = 21116;
-let HOST = window.location.hostname;
+let HOST = "";
 let RELAY_HOST = "";
 let CONFIG_KEY = "";
-const SCHEMA = "ws://";
 
 export async function loadConfig(): Promise<void> {
   try {
@@ -157,14 +155,7 @@ export default class Connection {
 
   async connectRelay(rr: rendezvous.RelayResponse) {
     const pk = rr.pk;
-    let uri: string;
-    if (RELAY_HOST) {
-      uri = getrUriFromRs(RELAY_HOST, true);
-    } else if (rr.relay_server) {
-      uri = getrUriFromRs(rr.relay_server, true, 2);
-    } else {
-      uri = getDefaultUri(true);
-    }
+    const uri = getDefaultUri(true);
     const uuid = rr.uuid;
     console.log(new Date() + ": Connecting to relay server: " + uri);
     const ws = new Websock(uri, false);
@@ -753,22 +744,10 @@ export default class Connection {
 
 
 function getDefaultUri(isRelay: Boolean = false): string {
-  return getrUriFromRs(HOST, isRelay);
-}
-
-function getrUriFromRs(
-  uri: string,
-  isRelay: Boolean = false,
-  roffset: number = 0
-): string {
-  if (uri.indexOf(":") > 0) {
-    const tmp = uri.split(":");
-    const port = parseInt(tmp[1]);
-    uri = tmp[0] + ":" + (port + (isRelay ? roffset || 3 : 2));
-  } else {
-    uri += ":" + (PORT + (isRelay ? 3 : 2));
+  if (isRelay) {
+    return RELAY_HOST || HOST;
   }
-  return SCHEMA + uri;
+  return HOST;
 }
 
 function hash(datas: (string | Uint8Array)[]): Uint8Array {
