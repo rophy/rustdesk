@@ -5,36 +5,16 @@ import { loadVp9 } from "./codec";
 import * as sha256 from "fast-sha256";
 import * as globals from "./globals";
 import { decompress, mapKey, sleep } from "./common";
+import { loadConfig, getConfigKey, getDefaultUri, getHost, getRelayHost } from "./url";
 
-let HOST = "";
-let RELAY_HOST = "";
-let CONFIG_KEY = "";
-
-export async function loadConfig(): Promise<void> {
-  try {
-    const resp = await fetch("config.json");
-    if (resp.ok) {
-      const config = await resp.json();
-      if (config.host) HOST = config.host;
-      if (config.relay) RELAY_HOST = config.relay;
-      if (config.key) CONFIG_KEY = config.key;
-      console.log("Loaded config: host=" + HOST + ", relay=" + (RELAY_HOST || HOST));
-    }
-  } catch (e) {
-    console.log("Failed to load config.json (" + e + "), using defaults (host=" + HOST + ")");
-  }
-}
-
-export function getConfigKey(): string {
-  return CONFIG_KEY;
-}
+export { loadConfig, getConfigKey };
 
 export function getConfigHost(): string {
-  return HOST;
+  return getHost();
 }
 
 export function getConfigRelay(): string {
-  return RELAY_HOST;
+  return getRelayHost();
 }
 
 type MsgboxCallback = (type: string, title: string, text: string) => void;
@@ -112,7 +92,7 @@ export default class Connection {
     const nat_type = rendezvous.NatType.SYMMETRIC;
     const punch_hole_request = rendezvous.PunchHoleRequest.fromPartial({
       id,
-      licence_key: CONFIG_KEY || undefined,
+      licence_key: getConfigKey() || undefined,
       conn_type,
       nat_type,
       token: localStorage.getItem("access_token") || undefined,
@@ -163,7 +143,7 @@ export default class Connection {
     console.log(new Date() + ": Connected to relay server");
     this._ws = ws;
     const request_relay = rendezvous.RequestRelay.fromPartial({
-      licence_key: CONFIG_KEY || undefined,
+      licence_key: getConfigKey() || undefined,
       uuid,
     });
     ws.sendRendezvous({ request_relay });
@@ -176,7 +156,7 @@ export default class Connection {
     if (pk) {
       const RS_PK = "OeVuKk5nlHiXp+APNn0Y3pC1Iwpwn44JGqrQCsWqmBw=";
       try {
-        pk = await globals.verify(pk, CONFIG_KEY || RS_PK);
+        pk = await globals.verify(pk, getConfigKey() || RS_PK);
         if (pk) {
           const idpk = message.IdPk.decode(pk);
           if (idpk.id == this._id) {
@@ -742,13 +722,6 @@ export default class Connection {
   }
 }
 
-
-function getDefaultUri(isRelay: Boolean = false): string {
-  if (isRelay) {
-    return RELAY_HOST || HOST;
-  }
-  return HOST;
-}
 
 function hash(datas: (string | Uint8Array)[]): Uint8Array {
   const hasher = new sha256.Hash();
