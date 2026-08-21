@@ -109,11 +109,8 @@ export default class Connection {
         this.msgbox("error", "Error", phr?.other_failure);
         return;
       }
-      if (phr.failure != rendezvous.PunchHoleResponse_Failure.UNRECOGNIZED) {
-        switch (phr?.failure) {
-          case rendezvous.PunchHoleResponse_Failure.ID_NOT_EXIST:
-            this.msgbox("error", "Error", "ID does not exist");
-            break;
+      if (phr.failure) {
+        switch (phr.failure) {
           case rendezvous.PunchHoleResponse_Failure.OFFLINE:
             this.msgbox("error", "Error", "Remote desktop is offline");
             break;
@@ -123,7 +120,11 @@ export default class Connection {
           case rendezvous.PunchHoleResponse_Failure.LICENSE_OVERUSE:
             this.msgbox("error", "Error", "Key overuse");
             break;
+          default:
+            this.msgbox("error", "Error", "Connection failed");
+            break;
         }
+        return;
       }
     } else if (rr) {
       if (!rr.version) {

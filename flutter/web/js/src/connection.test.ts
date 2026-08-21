@@ -667,10 +667,10 @@ describe("Connection", () => {
       expect(globals.msgbox).toHaveBeenCalledWith("error", "Error", "Server busy");
     });
 
-    it("handles ID_NOT_EXIST failure", async () => {
+    it("does not treat default failure value (0) as an error", async () => {
       nextWsResponse = { punch_hole_response: { failure: 0 } };
       await (conn as any)._start("test-peer");
-      expect(globals.msgbox).toHaveBeenCalledWith("error", "Error", "ID does not exist");
+      expect(globals.msgbox).not.toHaveBeenCalledWith("error", expect.anything(), expect.anything());
     });
 
     it("handles OFFLINE failure", async () => {
@@ -689,6 +689,12 @@ describe("Connection", () => {
       nextWsResponse = { punch_hole_response: { failure: 3 } };
       await (conn as any)._start("test-peer");
       expect(globals.msgbox).toHaveBeenCalledWith("error", "Error", "Key overuse");
+    });
+
+    it("handles unrecognized nonzero failure with generic message", async () => {
+      nextWsResponse = { punch_hole_response: { failure: 99 } };
+      await (conn as any)._start("test-peer");
+      expect(globals.msgbox).toHaveBeenCalledWith("error", "Error", "Connection failed");
     });
 
     it("handles relay_response with no version", async () => {
