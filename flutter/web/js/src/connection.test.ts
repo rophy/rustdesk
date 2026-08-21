@@ -658,6 +658,30 @@ describe("Connection", () => {
 
       expect(mockWs.sendMessage).toHaveBeenCalled();
     });
+
+    it("acks frames without crashing when decoder is not ready", () => {
+      (conn as any)._videoDecoder = undefined;
+      (conn as any)._firstFrame = true;
+      (conn as any)._ws = mockWs;
+
+      conn.handleVideoFrame({
+        vp9s: { frames: [{ data: new Uint8Array([1]) }] },
+      } as any);
+
+      expect(mockWs.sendMessage).toHaveBeenCalled();
+    });
+  });
+
+  describe("decoder lifecycle", () => {
+    it("close() clears decoder and increments generation", () => {
+      const mockDecoder = { close: vi.fn() };
+      (conn as any)._videoDecoder = mockDecoder;
+      const genBefore = (conn as any)._decoderGeneration;
+      conn.close();
+      expect(mockDecoder.close).toHaveBeenCalled();
+      expect((conn as any)._videoDecoder).toBeUndefined();
+      expect((conn as any)._decoderGeneration).toBeGreaterThan(genBefore);
+    });
   });
 
   describe("_start", () => {

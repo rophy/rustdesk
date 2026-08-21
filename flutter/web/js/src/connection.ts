@@ -32,6 +32,7 @@ export default class Connection {
   _peerInfo: message.PeerInfo | undefined;
   _firstFrame: Boolean | undefined;
   _videoDecoder: any;
+  _decoderGeneration: number;
   _password: Uint8Array | undefined;
   _options: any;
   _videoTestSpeed: number[];
@@ -43,6 +44,7 @@ export default class Connection {
     this._msgs = [];
     this._id = "";
     this._videoTestSpeed = [0, 0];
+    this._decoderGeneration = 0;
     //this._cursors = {};
   }
 
@@ -331,6 +333,8 @@ export default class Connection {
     clearInterval(this._interval);
     this._ws?.close();
     this._videoDecoder?.close();
+    this._videoDecoder = undefined;
+    this._decoderGeneration++;
   }
 
   refresh() {
@@ -426,6 +430,10 @@ export default class Connection {
     }
     if (vf.vp9s) {
       const dec = this._videoDecoder;
+      if (!dec) {
+        this.sendVideoReceived();
+        return;
+      }
       var tm = new Date().getTime();
       var i = 0;
       const n = vf.vp9s?.frames.length;
@@ -716,10 +724,19 @@ export default class Connection {
 
   loadVideoDecoder() {
     this._videoDecoder?.close();
+    this._videoDecoder = undefined;
+    const gen = ++this._decoderGeneration;
     loadVp9((decoder: any) => {
+      if (gen !== this._decoderGeneration) {
+        decoder.close();
+        return;
+      }
       this._videoDecoder = decoder;
       console.log("vp9 loaded");
-      console.log(decoder);
+    }, (err: any) => {
+      if (gen !== this._decoderGeneration) return;
+      this.msgbox("error", "Error", "Failed to load video decoder");
+      console.error("VP9 load failed:", err);
     });
   }
 }
