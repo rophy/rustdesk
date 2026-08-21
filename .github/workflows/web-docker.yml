@@ -7,7 +7,7 @@ on:
       - 'flutter/lib/**'
       - 'flutter/assets/**'
       - 'flutter/pubspec.*'
-      - 'Dockerfile.webclient'
+      - 'deploy/docker/webclient/Dockerfile'
       - '.github/workflows/web-docker.yml'
       - '.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff'
   push:
@@ -15,8 +15,7 @@ on:
   workflow_dispatch:
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/rustdesk-webclient
+  IMAGE_NAME: rophy/rustdesk-webclient
 
 jobs:
   test:
@@ -51,7 +50,6 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       contents: read
-      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -62,19 +60,18 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GHCR
+      - name: Log in to Docker Hub
         if: startsWith(github.ref, 'refs/tags/')
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.IMAGE_NAME }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -83,9 +80,18 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: Dockerfile.webclient
+          file: deploy/docker/webclient/Dockerfile
           push: ${{ startsWith(github.ref, 'refs/tags/') }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Update Docker Hub description
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ env.IMAGE_NAME }}
+          readme-filepath: deploy/docker/webclient/README.md
