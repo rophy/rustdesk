@@ -14,7 +14,7 @@ if (app) {
   </table></div>
   <div id="password" style="display: none;">
     <input type="password" id="password" />
-    <button id="confirm" onclick="confirm()">Confirm</button>
+    <button id="confirm" onclick="submitPassword()">Confirm</button>
     <button id="cancel" onclick="cancel();">Cancel</button>
   </div>
   <div id="status" style="display: none;">
@@ -105,11 +105,12 @@ if (app) {
     document.querySelector('div#canvas').style.display = 'none';
   }
 
-  window.confirm = () => {
+  window.submitPassword = () => {
     const password = document.querySelector('input#password').value;
-    if (password) {
+    const conn = globals.getConn();
+    if (password && conn) {
       document.querySelector('div#password').style.display = 'none';
-      globals.getConn().login(password);
+      conn.login(password);
     }
   }
 }

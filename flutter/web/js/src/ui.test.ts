@@ -98,3 +98,26 @@ describe("ui.js XSS prevention", () => {
     expect(textEl.style.fontWeight).toBe("bold");
   });
 });
+
+describe("ui.js password confirmation", () => {
+  it("does not override native window.confirm", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const source = fs.readFileSync(path.resolve(__dirname, "ui.js"), "utf-8");
+    expect(source).not.toMatch(/window\.confirm\s*=/);
+  });
+
+  it("confirm button calls submitPassword", () => {
+    const btn = document.querySelector("button#confirm") as HTMLElement;
+    expect(btn.getAttribute("onclick")).toBe("submitPassword()");
+  });
+
+  it("source: submitPassword guards getConn() before calling login", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const source = fs.readFileSync(path.resolve(__dirname, "ui.js"), "utf-8");
+    const fn = source.slice(source.indexOf("submitPassword"));
+    expect(fn).toMatch(/getConn\(\)/);
+    expect(fn).not.toMatch(/getConn\(\)\.login/);
+  });
+});
