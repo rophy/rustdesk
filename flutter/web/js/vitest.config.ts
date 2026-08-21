@@ -16,6 +16,7 @@ export default defineConfig({
       all: true,
       include: ["src/**"],
       exclude: [
+        "src/**/*.test.ts",
         "src/message.ts",
         "src/rendezvous.ts",
         "src/gen_js_from_hbb.ts",

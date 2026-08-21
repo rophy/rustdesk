@@ -48,7 +48,7 @@ export function pushEvent(name, payload) {
   if (window.onGlobalEvent) {
     window.onGlobalEvent(JSON.stringify(payload));
   } else {
-    console.warn('pushEvent (no handler):', name, payload);
+    console.warn('pushEvent (no handler):', name);
   }
 }
 
