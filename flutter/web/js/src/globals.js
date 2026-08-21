@@ -140,11 +140,21 @@ export function newConn() {
 }
 
 let sodium;
-export async function verify(signed, pk) {
-  if (!sodium) {
-    await _sodium.ready;
-    sodium = _sodium;
+let sodiumReady;
+export async function initSodium() {
+  if (!sodiumReady) {
+    sodiumReady = _sodium.ready.then(() => { sodium = _sodium; });
   }
+  await sodiumReady;
+}
+
+function requireSodium() {
+  if (!sodium) throw new Error('libsodium not initialized — call initSodium() first');
+  return sodium;
+}
+
+export async function verify(signed, pk) {
+  await initSodium();
   if (typeof pk == 'string') {
     pk = decodeBase64(pk);
   }
@@ -152,23 +162,24 @@ export async function verify(signed, pk) {
 }
 
 export function decodeBase64(pk) {
-  return sodium.from_base64(pk, sodium.base64_variants.ORIGINAL);
+  return requireSodium().from_base64(pk, sodium.base64_variants.ORIGINAL);
 }
 
 export function genBoxKeyPair() {
-  const pair = sodium.crypto_box_keypair();
+  const s = requireSodium();
+  const pair = s.crypto_box_keypair();
   const sk = pair.privateKey;
   const pk = pair.publicKey;
   return [sk, pk];
 }
 
 export function genSecretKey() {
-  return sodium.crypto_secretbox_keygen();
+  return requireSodium().crypto_secretbox_keygen();
 }
 
 export function seal(unsigned, theirPk, ourSk) {
   const nonce = Uint8Array.from(Array(24).fill(0));
-  return sodium.crypto_box_easy(unsigned, nonce, theirPk, ourSk);
+  return requireSodium().crypto_box_easy(unsigned, nonce, theirPk, ourSk);
 }
 
 function makeOnce(value) {
@@ -184,11 +195,11 @@ function makeOnce(value) {
 };
 
 export function encrypt(unsigned, nonce, key) {
-  return sodium.crypto_secretbox_easy(unsigned, makeOnce(nonce), key);
+  return requireSodium().crypto_secretbox_easy(unsigned, makeOnce(nonce), key);
 }
 
 export function decrypt(signed, nonce, key) {
-  return sodium.crypto_secretbox_open_easy(signed, makeOnce(nonce), key);
+  return requireSodium().crypto_secretbox_open_easy(signed, makeOnce(nonce), key);
 }
 
 window.setByName = (name, value) => {

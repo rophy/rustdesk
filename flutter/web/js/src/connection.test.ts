@@ -81,6 +81,7 @@ vi.mock("./globals", () => ({
   draw: vi.fn(),
   pushEvent: vi.fn(),
   getPeers: vi.fn(() => ({})),
+  initSodium: vi.fn().mockResolvedValue(undefined),
   isDesktop: vi.fn(() => true),
   verify: vi.fn().mockResolvedValue(new Uint8Array(32)),
   genBoxKeyPair: vi.fn(() => [new Uint8Array(32), new Uint8Array(32)]),

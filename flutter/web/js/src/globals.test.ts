@@ -77,6 +77,7 @@ import {
   isDesktop, msgbox, pushEvent, setConn, getConn, close, newConn,
   verify, genBoxKeyPair, genSecretKey, seal, encrypt, decrypt,
   getPeers, copyToClipboard, draw, sendOffCanvas, initAudio, playAudio,
+  initSodium,
 } from "./globals";
 
 describe("isDesktop", () => {
@@ -529,6 +530,56 @@ describe("initAudio / playAudio", () => {
   it("sends audio packet to opus worker", () => {
     const packet = new Uint8Array([1, 2, 3]);
     playAudio(packet);
+  });
+});
+
+describe("sodium initialization", () => {
+  it("initSodium resolves without error", async () => {
+    await expect(initSodium()).resolves.toBeUndefined();
+  });
+
+  it("initSodium is idempotent", async () => {
+    await initSodium();
+    await initSodium();
+  });
+
+  it("crypto functions work after initSodium", async () => {
+    await initSodium();
+    expect(() => genBoxKeyPair()).not.toThrow();
+    expect(() => genSecretKey()).not.toThrow();
+  });
+
+  it("source: all crypto functions use requireSodium() not raw _sodium", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const source = fs.readFileSync(path.resolve(__dirname, "globals.js"), "utf-8");
+
+    const cryptoSection = source.slice(source.indexOf("function requireSodium()"));
+    const cryptoFunctions = cryptoSection.match(/export (?:async )?function \w+/g) || [];
+    expect(cryptoFunctions.length).toBeGreaterThan(0);
+
+    const lines = cryptoSection.split("\n");
+    for (const line of lines) {
+      if (line.includes("import _sodium") || line.includes("_sodium.ready")) continue;
+      if (line.match(/\b_sodium\b/) && !line.includes("{ sodium = _sodium; }")) {
+        throw new Error(`Direct _sodium usage found: ${line.trim()}`);
+      }
+    }
+  });
+
+  it("source: connection.ts calls initSodium() before crypto operations", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const source = fs.readFileSync(path.resolve(__dirname, "connection.ts"), "utf-8");
+
+    const startMethod = source.slice(source.indexOf("async _start("));
+    const initLine = startMethod.indexOf("initSodium()");
+    expect(initLine).toBeGreaterThan(-1);
+
+    const verifyLine = startMethod.indexOf("verify(");
+    if (verifyLine > -1) {
+      expect(initLine).toBeLessThan(verifyLine);
+    }
   });
 });
 

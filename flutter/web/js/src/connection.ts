@@ -59,6 +59,7 @@ export default class Connection {
   }
 
   async _start(id: string) {
+    await globals.initSodium();
     if (!this._options) {
       this._options = globals.getPeers()[id] || {};
     }
