@@ -385,6 +385,7 @@ let opusWorker = new Worker("./libopus.js");
 let pcmPlayer;
 
 export function initAudio(channels, sampleRate) {
+  if (pcmPlayer) pcmPlayer.destroy();
   pcmPlayer = newAudioPlayer(channels, sampleRate);
   opusWorker.postMessage({ channels, sampleRate });
 }
@@ -400,7 +401,7 @@ window.init = async () => {
     }
   }
   opusWorker.onmessage = (e) => {
-    pcmPlayer.feed(e.data);
+    if (pcmPlayer) pcmPlayer.feed(e.data);
   }
   await loadConfig();
   loadVp9(() => { });

@@ -68,6 +68,7 @@ vi.mock("./common", () => ({
 vi.mock("pcm-player", () => {
   class MockPCMPlayer {
     feed = vi.fn();
+    destroy = vi.fn();
     constructor(_opts: any) {}
   }
   return { default: MockPCMPlayer };
@@ -525,6 +526,11 @@ describe("copyToClipboard", () => {
 describe("initAudio / playAudio", () => {
   it("initializes audio player", () => {
     initAudio(2, 48000);
+  });
+
+  it("destroys previous player on reinit", () => {
+    initAudio(2, 48000);
+    initAudio(2, 44100);
   });
 
   it("sends audio packet to opus worker", () => {
