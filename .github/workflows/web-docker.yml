@@ -5,6 +5,7 @@ on:
     paths:
       - 'flutter/web/**'
       - 'flutter/lib/**'
+      - 'flutter/assets/**'
       - 'flutter/pubspec.*'
       - 'Dockerfile.webclient'
       - '.github/workflows/web-docker.yml'
