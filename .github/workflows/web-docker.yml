@@ -3,14 +3,14 @@ name: Web client CI
 on:
   pull_request:
     paths:
-      - 'flutter/web/js/**'
+      - 'flutter/web/**'
       - 'flutter/lib/**'
       - 'flutter/pubspec.*'
       - 'Dockerfile.webclient'
       - '.github/workflows/web-docker.yml'
       - '.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff'
   push:
-    tags: ['v*']
+    tags: ['*']
   workflow_dispatch:
 
 env:
@@ -20,11 +20,14 @@ env:
 jobs:
   test:
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          persist-credentials: false
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -53,6 +56,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          persist-credentials: false
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3

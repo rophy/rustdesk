@@ -37,8 +37,10 @@ WORKDIR /build/flutter/web/js
 RUN yarn install && yarn build
 
 WORKDIR /build/flutter
+ARG WEB_DEPS_SHA256=b66011c4fc066b90c46ba0c78884fe5d1a7e5a7fad3dce401300ad893de63818
 RUN wget -q -O /tmp/web_deps.tar.gz \
       https://github.com/rustdesk/doc.rustdesk.com/releases/download/console/web_deps.tar.gz \
+    && echo "${WEB_DEPS_SHA256}  /tmp/web_deps.tar.gz" | sha256sum -c - \
     && flutter pub get && flutter build web --release \
     && tar xzf /tmp/web_deps.tar.gz -C build/web
 
