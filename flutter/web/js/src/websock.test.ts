@@ -212,4 +212,67 @@ describe("Websock", () => {
     const result = ws.parseRendezvous(new Uint8Array([1]));
     expect(result).toHaveProperty("rendezvous", true);
   });
+
+  it("next resolves immediately when message arrives after call", async () => {
+    const ws = new Websock("ws://test:1234", true);
+    const openPromise = ws.open(1000);
+    mockWsInstances[0].simulateOpen();
+    await openPromise;
+
+    const nextPromise = ws.next(1000);
+    mockWsInstances[0].simulateMessage(new Uint8Array([5, 6]).buffer);
+    const msg = await nextPromise;
+    expect(msg).toHaveProperty("rendezvous", true);
+  });
+
+  it("next does not use polling (no recursive setTimeout)", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const source = fs.readFileSync(
+      path.resolve(__dirname, "websock.ts"),
+      "utf-8"
+    );
+    const nextMethod = source.slice(
+      source.indexOf("async next("),
+      source.indexOf("_settlePending(")
+    );
+    expect(nextMethod).not.toMatch(/setTimeout\(\s*\(\)\s*=>\s*func/);
+  });
+
+  it("next rejects when connection closes while waiting", async () => {
+    const ws = new Websock("ws://test:1234", true);
+    const openPromise = ws.open(1000);
+    mockWsInstances[0].simulateOpen();
+    await openPromise;
+
+    const nextPromise = ws.next(5000);
+    ws.close();
+    await expect(nextPromise).rejects.toBe("Connection closed");
+  });
+
+  it("next rejects when remote closes while waiting", async () => {
+    const ws = new Websock("ws://test:1234", true);
+    const openPromise = ws.open(1000);
+    mockWsInstances[0].simulateOpen();
+    await openPromise;
+
+    const nextPromise = ws.next(5000);
+    mockWsInstances[0].simulateClose(1006);
+    await expect(nextPromise).rejects.toBe("Reset by the peer");
+  });
+
+  it("buffers messages when no next() is pending", async () => {
+    const ws = new Websock("ws://test:1234", true);
+    const openPromise = ws.open(1000);
+    mockWsInstances[0].simulateOpen();
+    await openPromise;
+
+    mockWsInstances[0].simulateMessage(new Uint8Array([1]).buffer);
+    mockWsInstances[0].simulateMessage(new Uint8Array([2]).buffer);
+
+    const msg1 = await ws.next(1000);
+    const msg2 = await ws.next(1000);
+    expect(msg1).toHaveProperty("rendezvous", true);
+    expect(msg2).toHaveProperty("rendezvous", true);
+  });
 });

@@ -13,6 +13,9 @@ export default class Websock {
   _secretKey: [Uint8Array, number, number] | undefined;
   _uri: string;
   _isRendezvous: boolean;
+  _pendingResolve: ((value: rendezvous.RendezvousMessage | message.Message) => void) | undefined;
+  _pendingReject: ((reason: any) => void) | undefined;
+  _pendingTimer: any;
 
   constructor(uri: string, isRendezvous: boolean = true) {
     this._eventHandlers = {
@@ -105,6 +108,7 @@ export default class Websock {
         this._status = e;
         console.error("WebSock.onclose: ");
         console.error(e);
+        this._settlePending(undefined, "Reset by the peer");
         this._eventHandlers.close(e);
         reject("Reset by the peer");
       };
@@ -116,6 +120,7 @@ export default class Websock {
         this._status = e;
         console.error("WebSock.onerror: ")
         console.error(e);
+        this._settlePending(undefined, e);
         this._eventHandlers.error(e);
       };
     });
@@ -124,33 +129,41 @@ export default class Websock {
   async next(
     timeout = 12000
   ): Promise<rendezvous.RendezvousMessage | message.Message> {
-    const func = (
-      resolve: (value: rendezvous.RendezvousMessage | message.Message) => void,
-      reject: (reason: any) => void,
-      tm0: number
-    ) => {
-      if (this._buf.length) {
-        resolve(this._buf[0]);
-        this._buf.splice(0, 1);
-      } else {
-        if (this._status != "open") {
-          reject(this._status);
-          return;
-        }
-        if (new Date().getTime() > tm0 + timeout) {
-          reject("Timeout");
-        } else {
-          setTimeout(() => func(resolve, reject, tm0), 1);
-        }
-      }
-    };
+    if (this._buf.length) {
+      return this._buf.shift()!;
+    }
+    if (this._status != "open") {
+      throw this._status;
+    }
     return new Promise((resolve, reject) => {
-      func(resolve, reject, new Date().getTime());
+      this._pendingResolve = resolve;
+      this._pendingReject = reject;
+      this._pendingTimer = setTimeout(() => {
+        this._settlePending(undefined, "Timeout");
+      }, timeout);
     });
+  }
+
+  _settlePending(
+    value?: rendezvous.RendezvousMessage | message.Message,
+    reason?: any
+  ) {
+    const resolve = this._pendingResolve;
+    const reject = this._pendingReject;
+    clearTimeout(this._pendingTimer);
+    this._pendingResolve = undefined;
+    this._pendingReject = undefined;
+    this._pendingTimer = undefined;
+    if (value !== undefined && resolve) {
+      resolve(value);
+    } else if (reason !== undefined && reject) {
+      reject(reason);
+    }
   }
 
   close() {
     this._status = "";
+    this._settlePending(undefined, "Connection closed");
     if (this._websocket) {
       if (
         this._websocket.readyState === WebSocket.OPEN ||
@@ -172,11 +185,14 @@ export default class Websock {
         k[2] += 1;
         bytes = globals.decrypt(bytes, k[2], k[0]);
       }
-      this._buf.push(
-        this._isRendezvous
-          ? this.parseRendezvous(bytes)
-          : this.parseMessage(bytes)
-      );
+      const msg = this._isRendezvous
+        ? this.parseRendezvous(bytes)
+        : this.parseMessage(bytes);
+      if (this._pendingResolve) {
+        this._settlePending(msg);
+      } else {
+        this._buf.push(msg);
+      }
     }
     this._eventHandlers.message(e.data);
   }
