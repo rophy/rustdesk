@@ -70,6 +70,13 @@ if (app) {
     func();
   }
 
+  function setStatusText(text, isError) {
+    const el = document.querySelector('div#text');
+    el.textContent = text;
+    el.style.fontWeight = 'bold';
+    el.style.color = isError ? 'red' : '';
+  }
+
   function msgbox(type, title, text) {
     if (!globals.getConn()) return;
     if (type == 'input-password') {
@@ -82,11 +89,11 @@ if (app) {
     } else if (type == 'error') {
       document.querySelector('div#status').style.display = 'block';
       document.querySelector('div#canvas').style.display = 'none';
-      document.querySelector('div#text').innerHTML = '<div style="color: red; font-weight: bold;">' + text + '</div>';
+      setStatusText(text, true);
     } else {
       document.querySelector('div#password').style.display = 'none';
       document.querySelector('div#status').style.display = 'block';
-      document.querySelector('div#text').innerHTML = '<div style="font-weight: bold;">' + text + '</div>';
+      setStatusText(text, false);
     }
   }
 
