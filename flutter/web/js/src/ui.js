@@ -13,7 +13,7 @@ if (app) {
     <tr><td></td><td><button onclick="connect();">Connect</button></td></tr>
   </table></div>
   <div id="password" style="display: none;">
-    <input type="password" id="password" />
+    <input type="password" id="password-input" />
     <button id="confirm" onclick="submitPassword()">Confirm</button>
     <button id="cancel" onclick="cancel();">Cancel</button>
   </div>
@@ -106,7 +106,7 @@ if (app) {
   }
 
   window.submitPassword = () => {
-    const password = document.querySelector('input#password').value;
+    const password = document.querySelector('#password-input').value;
     const conn = globals.getConn();
     if (password && conn) {
       document.querySelector('div#password').style.display = 'none';
