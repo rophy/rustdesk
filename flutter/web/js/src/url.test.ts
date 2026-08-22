@@ -1,9 +1,40 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { setConfig, getDefaultUri, getHost, getRelayHost, getConfigKey, loadConfig } from "./url";
+import { setConfig, getDefaultUri, getHost, getRelayHost, getConfigKey, loadConfig, resolveUri } from "./url";
+
+describe("resolveUri", () => {
+  it("resolves path to wss:// on HTTPS page", () => {
+    Object.defineProperty(globalThis, "location", {
+      value: { protocol: "https:", host: "rustdesk.corp.com" },
+      writable: true,
+    });
+    expect(resolveUri("/hbbs")).toBe("wss://rustdesk.corp.com/hbbs");
+    expect(resolveUri("/hbbr")).toBe("wss://rustdesk.corp.com/hbbr");
+  });
+
+  it("resolves path to ws:// on HTTP page", () => {
+    (globalThis as any).location = { protocol: "http:", host: "localhost:8080" };
+    expect(resolveUri("/hbbs")).toBe("ws://localhost:8080/hbbs");
+  });
+
+  it("returns full URI as-is", () => {
+    expect(resolveUri("wss://example.com/hbbs")).toBe("wss://example.com/hbbs");
+    expect(resolveUri("ws://127.0.0.1:21118")).toBe("ws://127.0.0.1:21118");
+  });
+
+  it("returns host:port as-is", () => {
+    expect(resolveUri("myserver.com:21118")).toBe("myserver.com:21118");
+  });
+});
 
 describe("getDefaultUri", () => {
   beforeEach(() => {
-    setConfig("", "", "");
+    setConfig("/hbbs", "/hbbr", "");
+    (globalThis as any).location = { protocol: "https:", host: "rustdesk.corp.com" };
+  });
+
+  it("defaults resolve to same-origin wss paths", () => {
+    expect(getDefaultUri()).toBe("wss://rustdesk.corp.com/hbbs");
+    expect(getDefaultUri(true)).toBe("wss://rustdesk.corp.com/hbbr");
   });
 
   it("returns full wss:// host URL without modification", () => {
@@ -22,14 +53,9 @@ describe("getDefaultUri", () => {
     expect(getDefaultUri(true)).toBe("ws://127.0.0.1:12022/hbbr");
   });
 
-  it("returns host:port as-is", () => {
-    setConfig("myserver.com:21116", "", "");
-    expect(getDefaultUri()).toBe("myserver.com:21116");
-  });
-
   it("falls back to HOST when RELAY_HOST is empty", () => {
-    setConfig("wss://rustdesk.example.com/hbbs", "", "");
-    expect(getDefaultUri(true)).toBe("wss://rustdesk.example.com/hbbs");
+    setConfig("/hbbs", "", "");
+    expect(getDefaultUri(true)).toBe("wss://rustdesk.corp.com/hbbs");
   });
 
   it("returns relay when relay is set", () => {
@@ -90,5 +116,16 @@ describe("loadConfig", () => {
     expect(getHost()).toBe("partial-host");
     expect(getRelayHost()).toBe("");
     expect(getConfigKey()).toBe("");
+  });
+
+  it("loads path-based config", async () => {
+    (globalThis as any).location = { protocol: "https:", host: "myapp.com" };
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ host: "/hbbs", relay: "/hbbr", key: "k1" }),
+    });
+    await loadConfig();
+    expect(getDefaultUri()).toBe("wss://myapp.com/hbbs");
+    expect(getDefaultUri(true)).toBe("wss://myapp.com/hbbr");
   });
 });
