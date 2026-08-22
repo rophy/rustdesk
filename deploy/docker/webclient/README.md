@@ -17,9 +17,17 @@ The web client defaults to same-origin WebSocket paths `/hbbs` and `/hbbr`, with
 For split-domain deployments (hbbs/hbbr on a different host):
 
 ```bash
+# Plain WebSocket (development)
 docker run -d -p 8080:80 \
   -e RUSTDESK_HOST=ws://hbbs.example.com:21118 \
   -e RUSTDESK_RELAY=ws://hbbr.example.com:21119 \
+  -e RUSTDESK_KEY=your-public-key \
+  rophy/rustdesk-webclient
+
+# Secure WebSocket via TLS-terminating proxy
+docker run -d -p 8080:80 \
+  -e RUSTDESK_HOST=wss://hbbs.example.com/ws \
+  -e RUSTDESK_RELAY=wss://hbbr.example.com/ws \
   -e RUSTDESK_KEY=your-public-key \
   rophy/rustdesk-webclient
 ```
@@ -54,6 +62,7 @@ location /hbbs {
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "upgrade";
+    proxy_read_timeout 3600s;
 }
 
 location /hbbr {
@@ -61,6 +70,7 @@ location /hbbr {
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "upgrade";
+    proxy_read_timeout 3600s;
 }
 ```
 

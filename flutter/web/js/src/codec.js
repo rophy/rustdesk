@@ -28,9 +28,9 @@ export async function loadVp9(callback, onError) {
     else console.error(err);
     return;
   }
-  const isSIMD = await simd();
-  console.log('isSIMD: ' + isSIMD);
   try {
+    const isSIMD = await simd();
+    console.log('isSIMD: ' + isSIMD);
     window.OGVLoader.loadClass(
       isSIMD ? "OGVDecoderVideoVP9SIMDW" : "OGVDecoderVideoVP9W",
       (videoCodecClass) => {

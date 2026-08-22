@@ -65,11 +65,14 @@ vi.mock("./common", () => ({
   translate: vi.fn((locale: string, text: string) => text),
 }));
 
+const mockPCMPlayerInstances: Array<{ feed: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn> }> = [];
 vi.mock("pcm-player", () => {
   class MockPCMPlayer {
     feed = vi.fn();
     destroy = vi.fn();
-    constructor(_opts: any) {}
+    constructor(_opts: any) {
+      mockPCMPlayerInstances.push(this);
+    }
   }
   return { default: MockPCMPlayer };
 });
@@ -529,8 +532,11 @@ describe("initAudio / playAudio", () => {
   });
 
   it("destroys previous player on reinit", () => {
+    const before = mockPCMPlayerInstances.length;
     initAudio(2, 48000);
+    const firstPlayer = mockPCMPlayerInstances[before];
     initAudio(2, 44100);
+    expect(firstPlayer.destroy).toHaveBeenCalled();
   });
 
   it("sends audio packet to opus worker", () => {
