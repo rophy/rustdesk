@@ -261,6 +261,40 @@ describe("Websock", () => {
     await expect(nextPromise).rejects.toBe("Reset by the peer");
   });
 
+  it("concurrent next() calls resolve in FIFO order", async () => {
+    const ws = new Websock("ws://test:1234", true);
+    const openPromise = ws.open(1000);
+    mockWsInstances[0].simulateOpen();
+    await openPromise;
+
+    const p1 = ws.next(5000);
+    const p2 = ws.next(5000);
+
+    mockWsInstances[0].simulateMessage(new Uint8Array([10]).buffer);
+    mockWsInstances[0].simulateMessage(new Uint8Array([20]).buffer);
+
+    const msg1 = await p1;
+    const msg2 = await p2;
+    expect((msg1 as any).data).toEqual(new Uint8Array([10]));
+    expect((msg2 as any).data).toEqual(new Uint8Array([20]));
+  });
+
+  it("concurrent next() calls reject independently on timeout", async () => {
+    const ws = new Websock("ws://test:1234", true);
+    const openPromise = ws.open(1000);
+    mockWsInstances[0].simulateOpen();
+    await openPromise;
+
+    const p1 = ws.next(50);
+    const p2 = ws.next(5000);
+
+    await expect(p1).rejects.toBe("Timeout");
+
+    mockWsInstances[0].simulateMessage(new Uint8Array([30]).buffer);
+    const msg2 = await p2;
+    expect((msg2 as any).data).toEqual(new Uint8Array([30]));
+  });
+
   it("buffers messages when no next() is pending", async () => {
     const ws = new Websock("ws://test:1234", true);
     const openPromise = ws.open(1000);

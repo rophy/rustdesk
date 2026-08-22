@@ -99,6 +99,89 @@ describe("ui.js XSS prevention", () => {
   });
 });
 
+describe("ui.js behavioral tests", () => {
+  let mockConn: any;
+  let mockGlobals: any;
+
+  beforeEach(async () => {
+    document.body.innerHTML = '<div id="app"></div>';
+
+    (globalThis as any).YUVCanvas = {
+      attach: vi.fn(() => ({ drawFrame: vi.fn() })),
+    };
+    (window as any).init = vi.fn();
+
+    vi.resetModules();
+
+    mockConn = {
+      setMsgbox: vi.fn(),
+      setDraw: vi.fn(),
+      start: vi.fn(),
+      login: vi.fn(),
+    };
+    mockGlobals = {
+      newConn: vi.fn(() => mockConn),
+      getConn: vi.fn(() => mockConn),
+      close: vi.fn(),
+      draw: vi.fn(),
+    };
+
+    vi.doMock("./style.css", () => ({}));
+    vi.doMock("./connection", () => ({}));
+    vi.doMock("./globals", () => mockGlobals);
+
+    await import("./ui.js");
+
+    (window as any).connect();
+  });
+
+  it("msgbox input-password shows password div, hides status", () => {
+    const msgbox = mockConn.setMsgbox.mock.calls[0][0];
+    msgbox("input-password", "Password", "Enter password");
+
+    expect((document.querySelector("div#password") as HTMLElement).style.display).toBe("block");
+    expect((document.querySelector("div#status") as HTMLElement).style.display).toBe("none");
+  });
+
+  it("msgbox error shows red status text via textContent", () => {
+    const msgbox = mockConn.setMsgbox.mock.calls[0][0];
+    const malicious = '<img src=x onerror="alert(1)">';
+    msgbox("error", "Error", malicious);
+
+    const textEl = document.querySelector("div#text") as HTMLElement;
+    expect(textEl.textContent).toBe(malicious);
+    expect(textEl.innerHTML).not.toContain("<img");
+    expect(textEl.style.color).toBe("red");
+  });
+
+  it("msgbox non-error shows status text without red", () => {
+    const msgbox = mockConn.setMsgbox.mock.calls[0][0];
+    msgbox("connecting", "Status", "Connecting...");
+
+    const textEl = document.querySelector("div#text") as HTMLElement;
+    expect(textEl.textContent).toBe("Connecting...");
+    expect(textEl.style.color).toBe("");
+  });
+
+  it("submitPassword calls conn.login with password value", () => {
+    const input = document.querySelector("#password-input") as HTMLInputElement;
+    input.value = "secret123";
+
+    (window as any).submitPassword();
+
+    expect(mockConn.login).toHaveBeenCalledWith("secret123");
+  });
+
+  it("submitPassword does nothing when password is empty", () => {
+    const input = document.querySelector("#password-input") as HTMLInputElement;
+    input.value = "";
+
+    (window as any).submitPassword();
+
+    expect(mockConn.login).not.toHaveBeenCalled();
+  });
+});
+
 describe("ui.js password confirmation", () => {
   it("does not override native window.confirm", async () => {
     const fs = await import("fs");
