@@ -13,6 +13,11 @@ export default class Websock {
   _secretKey: [Uint8Array, number, number] | undefined;
   _uri: string;
   _isRendezvous: boolean;
+  _pendingQueue: Array<{
+    resolve: (value: rendezvous.RendezvousMessage | message.Message) => void;
+    reject: (reason: any) => void;
+    timer: any;
+  }>;
 
   constructor(uri: string, isRendezvous: boolean = true) {
     this._eventHandlers = {
@@ -24,6 +29,7 @@ export default class Websock {
     this._uri = uri;
     this._status = "";
     this._buf = [];
+    this._pendingQueue = [];
     this._websocket = new WebSocket(uri);
     this._websocket.onmessage = this._recv_message.bind(this);
     this._websocket.binaryType = "arraybuffer";
@@ -105,6 +111,7 @@ export default class Websock {
         this._status = e;
         console.error("WebSock.onclose: ");
         console.error(e);
+        this._rejectAllPending("Reset by the peer");
         this._eventHandlers.close(e);
         reject("Reset by the peer");
       };
@@ -116,6 +123,7 @@ export default class Websock {
         this._status = e;
         console.error("WebSock.onerror: ")
         console.error(e);
+        this._rejectAllPending(e);
         this._eventHandlers.error(e);
       };
     });
@@ -124,33 +132,50 @@ export default class Websock {
   async next(
     timeout = 12000
   ): Promise<rendezvous.RendezvousMessage | message.Message> {
-    const func = (
-      resolve: (value: rendezvous.RendezvousMessage | message.Message) => void,
-      reject: (reason: any) => void,
-      tm0: number
-    ) => {
-      if (this._buf.length) {
-        resolve(this._buf[0]);
-        this._buf.splice(0, 1);
-      } else {
-        if (this._status != "open") {
-          reject(this._status);
-          return;
-        }
-        if (new Date().getTime() > tm0 + timeout) {
-          reject("Timeout");
-        } else {
-          setTimeout(() => func(resolve, reject, tm0), 1);
-        }
-      }
-    };
+    if (this._buf.length) {
+      return this._buf.shift()!;
+    }
+    if (this._status != "open") {
+      throw this._status;
+    }
     return new Promise((resolve, reject) => {
-      func(resolve, reject, new Date().getTime());
+      const entry = { resolve, reject, timer: undefined as any };
+      entry.timer = setTimeout(() => {
+        const idx = this._pendingQueue.indexOf(entry);
+        if (idx !== -1) {
+          this._pendingQueue.splice(idx, 1);
+          reject("Timeout");
+        }
+      }, timeout);
+      this._pendingQueue.push(entry);
     });
+  }
+
+  _settlePending(
+    value?: rendezvous.RendezvousMessage | message.Message,
+    reason?: any
+  ) {
+    const entry = this._pendingQueue.shift();
+    if (!entry) return;
+    clearTimeout(entry.timer);
+    if (value !== undefined) {
+      entry.resolve(value);
+    } else if (reason !== undefined) {
+      entry.reject(reason);
+    }
+  }
+
+  _rejectAllPending(reason: any) {
+    while (this._pendingQueue.length) {
+      const entry = this._pendingQueue.shift()!;
+      clearTimeout(entry.timer);
+      entry.reject(reason);
+    }
   }
 
   close() {
     this._status = "";
+    this._rejectAllPending("Connection closed");
     if (this._websocket) {
       if (
         this._websocket.readyState === WebSocket.OPEN ||
@@ -172,11 +197,14 @@ export default class Websock {
         k[2] += 1;
         bytes = globals.decrypt(bytes, k[2], k[0]);
       }
-      this._buf.push(
-        this._isRendezvous
-          ? this.parseRendezvous(bytes)
-          : this.parseMessage(bytes)
-      );
+      const msg = this._isRendezvous
+        ? this.parseRendezvous(bytes)
+        : this.parseMessage(bytes);
+      if (this._pendingQueue.length) {
+        this._settlePending(msg);
+      } else {
+        this._buf.push(msg);
+      }
     }
     this._eventHandlers.message(e.data);
   }

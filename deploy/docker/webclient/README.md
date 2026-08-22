@@ -4,10 +4,30 @@ OSS-compatible web client for [RustDesk](https://rustdesk.com) remote desktop, b
 
 ## Quick Start
 
+Behind a reverse proxy with path-based routing (recommended):
+
 ```bash
 docker run -d -p 8080:80 \
-  -e RUSTDESK_HOST=wss://your-server.com/hbbs \
-  -e RUSTDESK_RELAY=wss://your-server.com/hbbr \
+  -e RUSTDESK_KEY=your-public-key \
+  rophy/rustdesk-webclient
+```
+
+The web client defaults to same-origin WebSocket paths `/hbbs` and `/hbbr`, with `ws://` or `wss://` selected automatically based on the page protocol. No host configuration needed.
+
+For split-domain deployments (hbbs/hbbr on a different host):
+
+```bash
+# Plain WebSocket (development)
+docker run -d -p 8080:80 \
+  -e RUSTDESK_HOST=ws://hbbs.example.com:21118 \
+  -e RUSTDESK_RELAY=ws://hbbr.example.com:21119 \
+  -e RUSTDESK_KEY=your-public-key \
+  rophy/rustdesk-webclient
+
+# Secure WebSocket via TLS-terminating proxy
+docker run -d -p 8080:80 \
+  -e RUSTDESK_HOST=wss://hbbs.example.com/hbbs \
+  -e RUSTDESK_RELAY=wss://hbbr.example.com/hbbr \
   -e RUSTDESK_KEY=your-public-key \
   rophy/rustdesk-webclient
 ```
@@ -16,26 +36,43 @@ Then open http://localhost:8080 in a browser.
 
 ## Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `RUSTDESK_HOST` | Yes | WebSocket URL of the rendezvous server (hbbs) |
-| `RUSTDESK_RELAY` | No | WebSocket URL of the relay server (hbbr). Defaults to `RUSTDESK_HOST` |
-| `RUSTDESK_KEY` | No | Server public key |
-| `RUSTDESK_API` | No | API server URL (only for Server Pro) |
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `RUSTDESK_KEY` | **Yes** | | Server public key |
+| `RUSTDESK_HOST` | No | `/hbbs` | Rendezvous server (hbbs). Path (e.g. `/hbbs`) or full URI (e.g. `ws://host:21118`) |
+| `RUSTDESK_RELAY` | No | `/hbbr` | Relay server (hbbr). Path (e.g. `/hbbr`) or full URI (e.g. `ws://host:21119`) |
 
-## With Reverse Proxy
+When `RUSTDESK_HOST` or `RUSTDESK_RELAY` is a path (starts with `/`), the WebSocket scheme is derived from the page: `wss://` on HTTPS, `ws://` on HTTP. Full URIs are used as-is.
 
-When running behind a reverse proxy (nginx, Istio, etc.) that terminates TLS:
+## Reverse Proxy Setup
 
-```bash
-docker run -d -p 8080:80 \
-  -e RUSTDESK_HOST=wss://rustdesk.example.com/hbbs \
-  -e RUSTDESK_RELAY=wss://rustdesk.example.com/hbbr \
-  -e RUSTDESK_KEY=your-public-key \
-  rophy/rustdesk-webclient
+The proxy must route WebSocket connections to hbbs/hbbr:
+
+| Path | Backend | Protocol |
+|------|---------|----------|
+| `/hbbs` | hbbs:21118 | WebSocket |
+| `/hbbr` | hbbr:21119 | WebSocket |
+| `/` | webclient:80 | HTTP |
+
+The proxy should terminate TLS and support WebSocket upgrade. Example with nginx:
+
+```nginx
+location /hbbs {
+    proxy_pass http://hbbs:21118;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_read_timeout 3600s;
+}
+
+location /hbbr {
+    proxy_pass http://hbbr:21119;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_read_timeout 3600s;
+}
 ```
-
-The proxy should route `/hbbs` to hbbs port 21118 and `/hbbr` to hbbr port 21119 with WebSocket upgrade support.
 
 ## Source
 

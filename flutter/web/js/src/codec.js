@@ -21,23 +21,33 @@
 */
 import { simd } from "wasm-feature-detect";
 
-export async function loadVp9(callback) {
-  // Multithreading is used only if `options.threading` is true.
-  // This requires browser support for the new `SharedArrayBuffer` and `Atomics` APIs,
-  // currently available in Firefox and Chrome with experimental flags enabled.
-  // 所有主流浏览器均默认于2018年1月5日禁用SharedArrayBuffer
-  const isSIMD = await simd();
-  console.log('isSIMD: ' + isSIMD);
-  window.OGVLoader.loadClass(
-    isSIMD ? "OGVDecoderVideoVP9SIMDW" : "OGVDecoderVideoVP9W",
-    (videoCodecClass) => {
-      window.videoCodecClass = videoCodecClass;
-      videoCodecClass({ videoFormat: {} }).then((decoder) => {
-        decoder.init(() => {
-          callback(decoder);
-        })
-      })
-    },
-    { worker: true, threading: true }
-  );
+export async function loadVp9(callback, onError) {
+  if (!window.OGVLoader) {
+    const err = new Error("OGVLoader not available");
+    if (onError) onError(err);
+    else console.error(err);
+    return;
+  }
+  try {
+    const isSIMD = await simd();
+    console.log('isSIMD: ' + isSIMD);
+    window.OGVLoader.loadClass(
+      isSIMD ? "OGVDecoderVideoVP9SIMDW" : "OGVDecoderVideoVP9W",
+      (videoCodecClass) => {
+        window.videoCodecClass = videoCodecClass;
+        videoCodecClass({ videoFormat: {} }).then((decoder) => {
+          decoder.init(() => {
+            callback(decoder);
+          })
+        }).catch((err) => {
+          if (onError) onError(err);
+          else console.error("VP9 decoder init failed:", err);
+        });
+      },
+      { worker: true, threading: true }
+    );
+  } catch (err) {
+    if (onError) onError(err);
+    else console.error("VP9 load failed:", err);
+  }
 }

@@ -81,6 +81,7 @@ vi.mock("./globals", () => ({
   draw: vi.fn(),
   pushEvent: vi.fn(),
   getPeers: vi.fn(() => ({})),
+  initSodium: vi.fn().mockResolvedValue(undefined),
   isDesktop: vi.fn(() => true),
   verify: vi.fn().mockResolvedValue(new Uint8Array(32)),
   genBoxKeyPair: vi.fn(() => [new Uint8Array(32), new Uint8Array(32)]),
@@ -657,6 +658,30 @@ describe("Connection", () => {
 
       expect(mockWs.sendMessage).toHaveBeenCalled();
     });
+
+    it("acks frames without crashing when decoder is not ready", () => {
+      (conn as any)._videoDecoder = undefined;
+      (conn as any)._firstFrame = true;
+      (conn as any)._ws = mockWs;
+
+      conn.handleVideoFrame({
+        vp9s: { frames: [{ data: new Uint8Array([1]) }] },
+      } as any);
+
+      expect(mockWs.sendMessage).toHaveBeenCalled();
+    });
+  });
+
+  describe("decoder lifecycle", () => {
+    it("close() clears decoder and increments generation", () => {
+      const mockDecoder = { close: vi.fn() };
+      (conn as any)._videoDecoder = mockDecoder;
+      const genBefore = (conn as any)._decoderGeneration;
+      conn.close();
+      expect(mockDecoder.close).toHaveBeenCalled();
+      expect((conn as any)._videoDecoder).toBeUndefined();
+      expect((conn as any)._decoderGeneration).toBeGreaterThan(genBefore);
+    });
   });
 
   describe("_start", () => {
@@ -666,10 +691,10 @@ describe("Connection", () => {
       expect(globals.msgbox).toHaveBeenCalledWith("error", "Error", "Server busy");
     });
 
-    it("handles ID_NOT_EXIST failure", async () => {
+    it("does not treat default failure value (0) as an error", async () => {
       nextWsResponse = { punch_hole_response: { failure: 0 } };
       await (conn as any)._start("test-peer");
-      expect(globals.msgbox).toHaveBeenCalledWith("error", "Error", "ID does not exist");
+      expect(globals.msgbox).not.toHaveBeenCalledWith("error", expect.anything(), expect.anything());
     });
 
     it("handles OFFLINE failure", async () => {
@@ -688,6 +713,12 @@ describe("Connection", () => {
       nextWsResponse = { punch_hole_response: { failure: 3 } };
       await (conn as any)._start("test-peer");
       expect(globals.msgbox).toHaveBeenCalledWith("error", "Error", "Key overuse");
+    });
+
+    it("handles unrecognized nonzero failure with generic message", async () => {
+      nextWsResponse = { punch_hole_response: { failure: 99 } };
+      await (conn as any)._start("test-peer");
+      expect(globals.msgbox).toHaveBeenCalledWith("error", "Error", "Connection failed");
     });
 
     it("handles relay_response with no version", async () => {

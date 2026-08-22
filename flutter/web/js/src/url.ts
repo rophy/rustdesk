@@ -1,5 +1,5 @@
-let HOST = "";
-let RELAY_HOST = "";
+let HOST = "/hbbs";
+let RELAY_HOST = "/hbbr";
 let CONFIG_KEY = "";
 
 export function setConfig(host: string, relay: string, key: string) {
@@ -20,11 +20,17 @@ export function getConfigKey(): string {
   return CONFIG_KEY;
 }
 
-export function getDefaultUri(isRelay: Boolean = false): string {
-  if (isRelay) {
-    return RELAY_HOST || HOST;
+export function resolveUri(value: string): string {
+  if (value.startsWith("/")) {
+    const scheme = location.protocol === "https:" ? "wss" : "ws";
+    return scheme + "://" + location.host + value;
   }
-  return HOST;
+  return value;
+}
+
+export function getDefaultUri(isRelay: Boolean = false): string {
+  const raw = isRelay ? (RELAY_HOST || HOST) : HOST;
+  return resolveUri(raw);
 }
 
 export async function loadConfig(): Promise<void> {

@@ -53,16 +53,13 @@ COPY <<'EOF' /docker-entrypoint.d/90-rustdesk-config.sh
 #!/bin/sh
 set -e
 CONFIG=/usr/share/nginx/html/config.json
-if [ -n "$RUSTDESK_HOST" ]; then
-  cat > "$CONFIG" <<CONF
+cat > "$CONFIG" <<CONF
 {
-  "host": "${RUSTDESK_HOST}",
-  "relay": "${RUSTDESK_RELAY:-$RUSTDESK_HOST}",
-  "key": "${RUSTDESK_KEY:-}",
-  "api": "${RUSTDESK_API:-}"
+  "host": "${RUSTDESK_HOST:-}",
+  "relay": "${RUSTDESK_RELAY:-}",
+  "key": "${RUSTDESK_KEY:?RUSTDESK_KEY is required}"
 }
 CONF
-  echo "config.json written: host=$RUSTDESK_HOST relay=${RUSTDESK_RELAY:-$RUSTDESK_HOST}"
-fi
+echo "config.json written"
 EOF
 RUN chmod +x /docker-entrypoint.d/90-rustdesk-config.sh

@@ -54,4 +54,27 @@ describe("loadVp9", () => {
     await loadVp9(vi.fn());
     expect((window as any).videoCodecClass).toBeDefined();
   });
+
+  it("calls onError when OGVLoader is missing", async () => {
+    delete (window as any).OGVLoader;
+    const callback = vi.fn();
+    const onError = vi.fn();
+    await loadVp9(callback, onError);
+    expect(callback).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledWith(expect.any(Error));
+  });
+
+  it("calls onError when decoder init rejects", async () => {
+    vi.mocked(simd).mockResolvedValue(false);
+    const initError = new Error("init failed");
+    mockLoadClass.mockImplementation((cls: string, cb: Function) => {
+      cb(vi.fn().mockRejectedValue(initError));
+    });
+    const callback = vi.fn();
+    const onError = vi.fn();
+    await loadVp9(callback, onError);
+    await new Promise(r => setTimeout(r, 0));
+    expect(callback).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledWith(initError);
+  });
 });
