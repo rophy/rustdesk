@@ -26,8 +26,8 @@ docker run -d -p 8080:80 \
 
 # Secure WebSocket via TLS-terminating proxy
 docker run -d -p 8080:80 \
-  -e RUSTDESK_HOST=wss://hbbs.example.com/ws \
-  -e RUSTDESK_RELAY=wss://hbbr.example.com/ws \
+  -e RUSTDESK_HOST=wss://hbbs.example.com/hbbs \
+  -e RUSTDESK_RELAY=wss://hbbr.example.com/hbbr \
   -e RUSTDESK_KEY=your-public-key \
   rophy/rustdesk-webclient
 ```
