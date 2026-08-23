@@ -373,11 +373,7 @@ class RustdeskImpl {
 
   bool sessionIsKeyboardModeSupported(
       {required UuidValue sessionId, required String mode, dynamic hint}) {
-    if (mainGetInputSource(hint: hint) == 'Input source 1') {
-      return [kKeyMapMode, kKeyTranslateMode].contains(mode);
-    } else {
-      return [kKeyLegacyMode, kKeyMapMode].contains(mode);
-    }
+    return [kKeyLegacyMode, kKeyMapMode].contains(mode);
   }
 
   bool sessionIsMultiUiSession({required UuidValue sessionId, dynamic hint}) {
@@ -934,13 +930,9 @@ class RustdeskImpl {
   }
 
   String mainGetInputSource({dynamic hint}) {
-    final inputSource =
-        js.context.callMethod('getByName', ['option:local', 'input-source']);
-    // // js grab mode
-    // export const CONFIG_INPUT_SOURCE_1 = "Input source 1";
-    // // flutter grab mode
-    // export const CONFIG_INPUT_SOURCE_2 = "Input source 2";
-    return inputSource != '' ? inputSource : 'Input source 1';
+    // Input source 1 (OS-level hooks) is unavailable on web — always use
+    // Input source 2 (Flutter key events).
+    return 'Input source 2';
   }
 
   Future<void> mainSetInputSource(
@@ -1737,7 +1729,6 @@ class RustdeskImpl {
 
   String mainSupportedInputSource({dynamic hint}) {
     return jsonEncode([
-      ['Input source 1', 'input_source_1_tip'],
       ['Input source 2', 'input_source_2_tip']
     ]);
   }

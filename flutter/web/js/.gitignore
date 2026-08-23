@@ -7,3 +7,7 @@ dist-ssr
 ogvjs
 .vscode
 .yarn
+mise.toml
+src/gen_js_from_hbb.ts
+src/message.ts
+src/rendezvous.ts
