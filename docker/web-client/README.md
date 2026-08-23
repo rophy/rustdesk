@@ -9,7 +9,7 @@ Behind a reverse proxy with path-based routing (recommended):
 ```bash
 docker run -d -p 8080:80 \
   -e RUSTDESK_KEY=your-public-key \
-  rophy/rustdesk-webclient
+  ghcr.io/rophy/rustdesk/web-client
 ```
 
 The web client defaults to same-origin WebSocket paths `/hbbs` and `/hbbr`, with `ws://` or `wss://` selected automatically based on the page protocol. No host configuration needed.
@@ -22,14 +22,14 @@ docker run -d -p 8080:80 \
   -e RUSTDESK_HOST=ws://hbbs.example.com:21118 \
   -e RUSTDESK_RELAY=ws://hbbr.example.com:21119 \
   -e RUSTDESK_KEY=your-public-key \
-  rophy/rustdesk-webclient
+  ghcr.io/rophy/rustdesk/web-client
 
 # Secure WebSocket via TLS-terminating proxy
 docker run -d -p 8080:80 \
   -e RUSTDESK_HOST=wss://hbbs.example.com/hbbs \
   -e RUSTDESK_RELAY=wss://hbbr.example.com/hbbr \
   -e RUSTDESK_KEY=your-public-key \
-  rophy/rustdesk-webclient
+  ghcr.io/rophy/rustdesk/web-client
 ```
 
 Then open http://localhost:8080 in a browser.
@@ -52,7 +52,7 @@ The proxy must route WebSocket connections to hbbs/hbbr:
 |------|---------|----------|
 | `/hbbs` | hbbs:21118 | WebSocket |
 | `/hbbr` | hbbr:21119 | WebSocket |
-| `/` | webclient:80 | HTTP |
+| `/` | web-client:80 | HTTP |
 
 The proxy should terminate TLS and support WebSocket upgrade. Example with nginx:
 
@@ -76,4 +76,4 @@ location /hbbr {
 
 ## Source
 
-Built from [rophy/rustdesk](https://github.com/rophy/rustdesk) using [`deploy/docker/webclient/Dockerfile`](https://github.com/rophy/rustdesk/blob/master/deploy/docker/webclient/Dockerfile).
+Built from [rophy/rustdesk](https://github.com/rophy/rustdesk) using [`docker/web-client/Dockerfile`](https://github.com/rophy/rustdesk/blob/master/docker/web-client/Dockerfile).
