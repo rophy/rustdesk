@@ -6,6 +6,9 @@ on:
     paths-ignore:
     - "docs/**"
     - "README.md"
+    - "docker/**"
+    - "deploy/**"
+    - ".github/workflows/web-*.yml"
   push:
     branches:
       - master
@@ -16,6 +19,8 @@ on:
       - "res/**"
       - "appimage/**"
       - "flatpak/**"
+      - "docker/**"
+      - "deploy/**"
 
 jobs:
   run-ci:
