@@ -1,3 +1,5 @@
+FROM --platform=linux/amd64 ghcr.io/rophy/rustdesk/web-deps:20260823-1 AS web-deps
+
 FROM --platform=linux/amd64 ubuntu:22.04 AS build
 
 ARG FLUTTER_VERSION=3.24.5
@@ -37,17 +39,28 @@ WORKDIR /build/flutter/web/js
 RUN yarn install && yarn build
 
 WORKDIR /build/flutter
-ARG WEB_DEPS_SHA256=b66011c4fc066b90c46ba0c78884fe5d1a7e5a7fad3dce401300ad893de63818
-RUN wget -q -O /tmp/web_deps.tar.gz \
-      https://github.com/rustdesk/doc.rustdesk.com/releases/download/console/web_deps.tar.gz \
-    && echo "${WEB_DEPS_SHA256}  /tmp/web_deps.tar.gz" | sha256sum -c - \
-    && flutter pub get && flutter build web --release \
-    && tar xzf /tmp/web_deps.tar.gz -C build/web
+COPY --from=web-deps /web_deps.tar.gz /tmp/web_deps.tar.gz
+RUN flutter pub get && flutter build web --release \
+    && tar xzf /tmp/web_deps.tar.gz -C build/web \
+    && sh /build/docker/web-client/cache-bust.sh
 
 # --- Production stage ---
 FROM nginx:alpine
 
 COPY --from=build /build/flutter/build/web /usr/share/nginx/html
+
+# Prevent CDN/browser from caching mutable assets; let the Flutter service worker handle caching
+COPY <<'NGINX' /etc/nginx/conf.d/cache-control.conf
+server {
+    listen 80;
+    location / {
+        root /usr/share/nginx/html;
+        index index.html;
+        add_header Cache-Control "no-cache, must-revalidate";
+    }
+}
+NGINX
+RUN rm /etc/nginx/conf.d/default.conf
 
 COPY <<'EOF' /docker-entrypoint.d/90-rustdesk-config.sh
 #!/bin/sh
