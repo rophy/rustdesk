@@ -7,11 +7,20 @@ on:
       - 'flutter/lib/**'
       - 'flutter/assets/**'
       - 'flutter/pubspec.*'
-      - 'deploy/docker/webclient/Dockerfile'
+      - 'docker/webclient/**'
       - '.github/workflows/web-docker.yml'
       - '.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff'
   push:
-    tags: ['*']
+    branches: [master]
+    paths:
+      - 'flutter/web/**'
+      - 'flutter/lib/**'
+      - 'flutter/assets/**'
+      - 'flutter/pubspec.*'
+      - 'docker/webclient/**'
+      - '.github/workflows/web-docker.yml'
+      - '.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff'
+    tags: ['webclient-*']
   workflow_dispatch:
 
 env:
@@ -73,14 +82,14 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=match,pattern=webclient-(.*),group=1
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/') }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: deploy/docker/webclient/Dockerfile
+          file: docker/webclient/Dockerfile
           push: ${{ startsWith(github.ref, 'refs/tags/') }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
