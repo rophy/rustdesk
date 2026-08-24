@@ -12,7 +12,7 @@ docker run -d -p 8080:80 \
   ghcr.io/rophy/rustdesk/web-client
 ```
 
-The web client defaults to same-origin WebSocket paths `/hbbs` and `/hbbr`, with `ws://` or `wss://` selected automatically based on the page protocol. No host configuration needed.
+The web client defaults to same-origin WebSocket paths `/ws/id` and `/ws/relay`, with `ws://` or `wss://` selected automatically based on the page protocol. No host configuration needed.
 
 For split-domain deployments (hbbs/hbbr on a different host):
 
@@ -26,8 +26,8 @@ docker run -d -p 8080:80 \
 
 # Secure WebSocket via TLS-terminating proxy
 docker run -d -p 8080:80 \
-  -e RUSTDESK_HOST=wss://hbbs.example.com/hbbs \
-  -e RUSTDESK_RELAY=wss://hbbr.example.com/hbbr \
+  -e RUSTDESK_HOST=wss://rustdesk.example.com/ws/id \
+  -e RUSTDESK_RELAY=wss://rustdesk.example.com/ws/relay \
   -e RUSTDESK_KEY=your-public-key \
   ghcr.io/rophy/rustdesk/web-client
 ```
@@ -39,8 +39,8 @@ Then open http://localhost:8080 in a browser.
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `RUSTDESK_KEY` | **Yes** | | Server public key |
-| `RUSTDESK_HOST` | No | `/hbbs` | Rendezvous server (hbbs). Path (e.g. `/hbbs`) or full URI (e.g. `ws://host:21118`) |
-| `RUSTDESK_RELAY` | No | `/hbbr` | Relay server (hbbr). Path (e.g. `/hbbr`) or full URI (e.g. `ws://host:21119`) |
+| `RUSTDESK_HOST` | No | `/ws/id` | Rendezvous server (hbbs). Path (e.g. `/ws/id`) or full URI (e.g. `ws://host:21118`) |
+| `RUSTDESK_RELAY` | No | `/ws/relay` | Relay server (hbbr). Path (e.g. `/ws/relay`) or full URI (e.g. `ws://host:21119`) |
 
 When `RUSTDESK_HOST` or `RUSTDESK_RELAY` is a path (starts with `/`), the WebSocket scheme is derived from the page: `wss://` on HTTPS, `ws://` on HTTP. Full URIs are used as-is.
 
@@ -50,14 +50,14 @@ The proxy must route WebSocket connections to hbbs/hbbr:
 
 | Path | Backend | Protocol |
 |------|---------|----------|
-| `/hbbs` | hbbs:21118 | WebSocket |
-| `/hbbr` | hbbr:21119 | WebSocket |
+| `/ws/id` | hbbs:21118 | WebSocket |
+| `/ws/relay` | hbbr:21119 | WebSocket |
 | `/` | web-client:80 | HTTP |
 
 The proxy should terminate TLS and support WebSocket upgrade. Example with nginx:
 
 ```nginx
-location /hbbs {
+location /ws/id {
     proxy_pass http://hbbs:21118;
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
@@ -65,7 +65,7 @@ location /hbbs {
     proxy_read_timeout 3600s;
 }
 
-location /hbbr {
+location /ws/relay {
     proxy_pass http://hbbr:21119;
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
