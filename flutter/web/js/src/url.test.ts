@@ -7,17 +7,17 @@ describe("resolveUri", () => {
       value: { protocol: "https:", host: "rustdesk.corp.com" },
       writable: true,
     });
-    expect(resolveUri("/hbbs")).toBe("wss://rustdesk.corp.com/hbbs");
-    expect(resolveUri("/hbbr")).toBe("wss://rustdesk.corp.com/hbbr");
+    expect(resolveUri("/ws/id")).toBe("wss://rustdesk.corp.com/ws/id");
+    expect(resolveUri("/ws/relay")).toBe("wss://rustdesk.corp.com/ws/relay");
   });
 
   it("resolves path to ws:// on HTTP page", () => {
     (globalThis as any).location = { protocol: "http:", host: "localhost:8080" };
-    expect(resolveUri("/hbbs")).toBe("ws://localhost:8080/hbbs");
+    expect(resolveUri("/ws/id")).toBe("ws://localhost:8080/ws/id");
   });
 
   it("returns full URI as-is", () => {
-    expect(resolveUri("wss://example.com/hbbs")).toBe("wss://example.com/hbbs");
+    expect(resolveUri("wss://example.com/ws/id")).toBe("wss://example.com/ws/id");
     expect(resolveUri("ws://127.0.0.1:21118")).toBe("ws://127.0.0.1:21118");
   });
 
@@ -28,34 +28,34 @@ describe("resolveUri", () => {
 
 describe("getDefaultUri", () => {
   beforeEach(() => {
-    setConfig("/hbbs", "/hbbr", "");
+    setConfig("/ws/id", "/ws/relay", "");
     (globalThis as any).location = { protocol: "https:", host: "rustdesk.corp.com" };
   });
 
   it("defaults resolve to same-origin wss paths", () => {
-    expect(getDefaultUri()).toBe("wss://rustdesk.corp.com/hbbs");
-    expect(getDefaultUri(true)).toBe("wss://rustdesk.corp.com/hbbr");
+    expect(getDefaultUri()).toBe("wss://rustdesk.corp.com/ws/id");
+    expect(getDefaultUri(true)).toBe("wss://rustdesk.corp.com/ws/relay");
   });
 
   it("returns full wss:// host URL without modification", () => {
-    setConfig("wss://rustdesk.example.com/hbbs", "wss://rustdesk.example.com/hbbr", "");
-    expect(getDefaultUri()).toBe("wss://rustdesk.example.com/hbbs");
+    setConfig("wss://rustdesk.example.com/ws/id", "wss://rustdesk.example.com/ws/relay", "");
+    expect(getDefaultUri()).toBe("wss://rustdesk.example.com/ws/id");
   });
 
   it("returns full wss:// relay URL without modification", () => {
-    setConfig("wss://rustdesk.example.com/hbbs", "wss://rustdesk.example.com/hbbr", "");
-    expect(getDefaultUri(true)).toBe("wss://rustdesk.example.com/hbbr");
+    setConfig("wss://rustdesk.example.com/ws/id", "wss://rustdesk.example.com/ws/relay", "");
+    expect(getDefaultUri(true)).toBe("wss://rustdesk.example.com/ws/relay");
   });
 
   it("returns full ws:// URL without modification", () => {
-    setConfig("ws://127.0.0.1:12022/hbbs", "ws://127.0.0.1:12022/hbbr", "");
-    expect(getDefaultUri()).toBe("ws://127.0.0.1:12022/hbbs");
-    expect(getDefaultUri(true)).toBe("ws://127.0.0.1:12022/hbbr");
+    setConfig("ws://127.0.0.1:12022/ws/id", "ws://127.0.0.1:12022/ws/relay", "");
+    expect(getDefaultUri()).toBe("ws://127.0.0.1:12022/ws/id");
+    expect(getDefaultUri(true)).toBe("ws://127.0.0.1:12022/ws/relay");
   });
 
   it("falls back to HOST when RELAY_HOST is empty", () => {
-    setConfig("/hbbs", "", "");
-    expect(getDefaultUri(true)).toBe("wss://rustdesk.corp.com/hbbs");
+    setConfig("/ws/id", "", "");
+    expect(getDefaultUri(true)).toBe("wss://rustdesk.corp.com/ws/id");
   });
 
   it("returns relay when relay is set", () => {
@@ -82,14 +82,14 @@ describe("loadConfig", () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
-        host: "wss://test.example.com/hbbs",
-        relay: "wss://test.example.com/hbbr",
+        host: "wss://test.example.com/ws/id",
+        relay: "wss://test.example.com/ws/relay",
         key: "testkey123",
       }),
     });
     await loadConfig();
-    expect(getHost()).toBe("wss://test.example.com/hbbs");
-    expect(getRelayHost()).toBe("wss://test.example.com/hbbr");
+    expect(getHost()).toBe("wss://test.example.com/ws/id");
+    expect(getRelayHost()).toBe("wss://test.example.com/ws/relay");
     expect(getConfigKey()).toBe("testkey123");
   });
 
@@ -122,10 +122,10 @@ describe("loadConfig", () => {
     (globalThis as any).location = { protocol: "https:", host: "myapp.com" };
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ host: "/hbbs", relay: "/hbbr", key: "k1" }),
+      json: () => Promise.resolve({ host: "/ws/id", relay: "/ws/relay", key: "k1" }),
     });
     await loadConfig();
-    expect(getDefaultUri()).toBe("wss://myapp.com/hbbs");
-    expect(getDefaultUri(true)).toBe("wss://myapp.com/hbbr");
+    expect(getDefaultUri()).toBe("wss://myapp.com/ws/id");
+    expect(getDefaultUri(true)).toBe("wss://myapp.com/ws/relay");
   });
 });

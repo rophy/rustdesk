@@ -1,5 +1,5 @@
-let HOST = "/hbbs";
-let RELAY_HOST = "/hbbr";
+let HOST = "/ws/id";
+let RELAY_HOST = "/ws/relay";
 let CONFIG_KEY = "";
 
 export function setConfig(host: string, relay: string, key: string) {
