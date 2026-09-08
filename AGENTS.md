@@ -1,5 +1,20 @@
 # RustDesk Guide
 
+## Repos
+
+Three repos work together:
+
+| Repo | Local Path | Purpose |
+|------|-----------|---------|
+| [rophy/rustdesk](https://github.com/rophy/rustdesk) | `~/projects/rustdesk` | Client + web client (Flutter), forked to restore OSS web client |
+| [rophy/rustdesk-server](https://github.com/rophy/rustdesk-server) | `~/projects/rustdesk-server` | Server (hbbs/hbbr), forked to enable WS peer registration |
+| [rophy/rustdesk-charts](https://github.com/rophy/rustdesk-charts) | `~/projects/rustdesk-charts` | Helm chart for deploying all components to Kubernetes |
+
+Images published to `ghcr.io/rophy/`:
+- `ghcr.io/rophy/rustdesk-server` — hbbs and hbbr (multi-binary image)
+- `ghcr.io/rophy/rustdesk/web-client` — browser-based client
+- Helm chart: `oci://ghcr.io/rophy/charts/rustdesk`
+
 ## Project Layout
 
 ### Directory Structure
