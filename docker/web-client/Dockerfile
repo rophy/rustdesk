@@ -68,6 +68,8 @@ set -e
 CONFIG=/usr/share/nginx/html/config.json
 cat > "$CONFIG" <<CONF
 {
+  "host": "${RUSTDESK_HOST:-/ws/id}",
+  "relay": "${RUSTDESK_RELAY:-/ws/relay}",
   "key": "${RUSTDESK_KEY:?RUSTDESK_KEY is required}"
 }
 CONF
